@@ -10,6 +10,12 @@ MOVE_SPEED = 5
 PLATFORM_IMAGES = ["ground_grass", "ground_sand", "ground_stone", "ground_wood", "ground_cake"]
 PLATFORM_MARGIN_X = 100
 
+COIN_TYPES = {
+    "bronze": 10,
+    "silver": 20,
+    "gold": 30
+}
+
 MIN_GAP = 50
 MAX_GAP = 90
 
@@ -50,7 +56,9 @@ def generate_platforms(anchor_x=None):
         coin_platforms = random.sample(coin_candidates, num_coins)
 
         for platform in coin_platforms:
-            coin = Actor("bronze")
+            coin_image, coin_value = random.choice(list(COIN_TYPES.items()))
+            coin = Actor(coin_image)
+            coin.value = coin_value
             coin.x = platform.x
             coin.bottom = platform.top
             coins.append(coin)
@@ -105,10 +113,10 @@ def update():
                 vy = JUMP_SPEED
                 break
 
-    for coin in coins:
+    for coin in coins[:]:
         if bunny.colliderect(coin):
             coins.remove(coin)
-            score += 10
+            score += coin.value
 
     for trap in traps:
         if bunny.colliderect(trap):

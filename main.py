@@ -17,11 +17,14 @@ bunny = Actor("bunny")
 
 platforms = []
 traps = []
+coins = []
 game_over = False
+score = 0
 
 def generate_platforms(anchor_x=None):
     platforms.clear()
     traps.clear()
+    coins.clear()
     y = HEIGHT - 60
     x = anchor_x if anchor_x is not None else random.randint(PLATFORM_MARGIN_X, WIDTH - PLATFORM_MARGIN_X)
 
@@ -41,14 +44,26 @@ def generate_platforms(anchor_x=None):
             trap.bottom = platform.top
             traps.append(trap)
 
+    coin_candidates = [p for p in platforms[1:] if p not in trap_platforms]
+    if coin_candidates:
+        num_coins = random.randint(1, min(5, len(coin_candidates)))
+        coin_platforms = random.sample(coin_candidates, num_coins)
+
+        for platform in coin_platforms:
+            coin = Actor("bronze")
+            coin.x = platform.x
+            coin.bottom = platform.top
+            coins.append(coin)
+
 generate_platforms()
 
 vx = 0
 vy = 0
 
 def reset_bunny():
-    global vx, vy, game_over
+    global vx, vy, game_over, score
     game_over = False
+    score = 0
     generate_platforms()
     first_platform = platforms[0]
     bunny.x = first_platform.x
@@ -59,7 +74,7 @@ def reset_bunny():
 reset_bunny()
 
 def update():
-    global vx, vy, game_over
+    global vx, vy, game_over, score
 
     if game_over:
         if keyboard.space:
@@ -90,6 +105,11 @@ def update():
                 vy = JUMP_SPEED
                 break
 
+    for coin in coins:
+        if bunny.colliderect(coin):
+            coins.remove(coin)
+            score += 10
+
     for trap in traps:
         if bunny.colliderect(trap):
             game_over = True
@@ -111,7 +131,11 @@ def draw():
         platform.draw()
     for trap in traps:
         trap.draw()
+    for coin in coins:
+        coin.draw()
     bunny.draw()
+
+    screen.draw.text(f"Монети: {score}", (10, 10), fontsize=24, color="black")
 
     if game_over:
         screen.draw.text("GAME OVER", center=(WIDTH // 2, HEIGHT // 2 - 30), fontsize=64, color="#4817bd")

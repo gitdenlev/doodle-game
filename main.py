@@ -19,18 +19,26 @@ COIN_TYPES = {
 MIN_GAP = 50
 MAX_GAP = 90
 
+JETPACK_SPAWN_CHANCE = 0.9
+JETPACK_SPEED = -20
+JETPACK_DURATION = 3.0
+
 bunny = Actor("bunny")
 
 platforms = []
 traps = []
 coins = []
+jetpacks = []
 game_over = False
 score = 0
+jetpack_active = False
+jetpack_timer = 0.0
 
 def generate_platforms(anchor_x=None):
     platforms.clear()
     traps.clear()
     coins.clear()
+    jetpacks.clear()
     y = HEIGHT - 60
     x = anchor_x if anchor_x is not None else random.randint(PLATFORM_MARGIN_X, WIDTH - PLATFORM_MARGIN_X)
 
@@ -63,15 +71,25 @@ def generate_platforms(anchor_x=None):
             coin.bottom = platform.top
             coins.append(coin)
 
+    jetpack_candidates = [p for p in platforms[1:] if p not in trap_platforms]
+    if jetpack_candidates and random.random() < JETPACK_SPAWN_CHANCE:
+        platform = random.choice(jetpack_candidates)
+        jetpack = Actor("jetpack")
+        jetpack.x = platform.x
+        jetpack.bottom = platform.top
+        jetpacks.append(jetpack)
+
 generate_platforms()
 
 vx = 0
 vy = 0
 
 def reset_bunny():
-    global vx, vy, game_over, score
+    global vx, vy, game_over, score, jetpack_active, jetpack_timer
     game_over = False
     score = 0
+    jetpack_active = False
+    jetpack_timer = 0.0
     generate_platforms()
     first_platform = platforms[0]
     bunny.x = first_platform.x
@@ -81,8 +99,8 @@ def reset_bunny():
 
 reset_bunny()
 
-def update():
-    global vx, vy, game_over, score
+def update(dt=1/60):
+    global vx, vy, game_over, score, jetpack_active, jetpack_timer
 
     if game_over:
         if keyboard.space:
@@ -98,7 +116,14 @@ def update():
 
     prev_bottom = bunny.bottom
 
-    vy += GRAVITY
+    if jetpack_active:
+        jetpack_timer -= dt
+        if jetpack_timer <= 0:
+            jetpack_active = False
+        vy = JETPACK_SPEED
+    else:
+        vy += GRAVITY
+
     bunny.y += vy
     bunny.x += vx
 
@@ -107,7 +132,7 @@ def update():
     elif bunny.x > WIDTH:
         bunny.x = 0
 
-    if vy > 0:
+    if not jetpack_active and vy > 0:
         for platform in platforms:
             if prev_bottom <= platform.top <= bunny.bottom and platform.left < bunny.x < platform.right:
                 vy = JUMP_SPEED
@@ -118,10 +143,17 @@ def update():
             coins.remove(coin)
             score += coin.value
 
-    for trap in traps:
-        if bunny.colliderect(trap):
-            game_over = True
-            return
+    for jetpack in jetpacks[:]:
+        if bunny.colliderect(jetpack):
+            jetpacks.remove(jetpack)
+            jetpack_active = True
+            jetpack_timer = JETPACK_DURATION
+
+    if not jetpack_active:
+        for trap in traps:
+            if bunny.colliderect(trap):
+                game_over = True
+                return
 
     if bunny.bottom < 0:
         generate_platforms(anchor_x=bunny.x)
@@ -141,9 +173,13 @@ def draw():
         trap.draw()
     for coin in coins:
         coin.draw()
+    for jetpack in jetpacks:
+        jetpack.draw()
     bunny.draw()
 
     screen.draw.text(f"Монети: {score}", (10, 10), fontsize=24, color="black")
+    if jetpack_active:
+        screen.draw.text(f"Джетпак: {max(0.0, jetpack_timer):.1f}с", (10, 40), fontsize=24, color="yellow")
 
     if game_over:
         screen.draw.text("GAME OVER", center=(WIDTH // 2, HEIGHT // 2 - 30), fontsize=64, color="#4817bd")

@@ -23,6 +23,7 @@ JETPACK_SPAWN_CHANCE = 0.5
 JETPACK_SPEED = -20
 JETPACK_DURATION = 3.0
 
+music.play("bg_music")
 bunny = Actor("bunny")
 
 platforms = []
@@ -96,6 +97,7 @@ def reset_bunny():
     bunny.bottom = first_platform.top - 60
     vx = 0
     vy = 0
+    music.play("bg_music")
 
 reset_bunny()
 
@@ -142,17 +144,21 @@ def update(dt=1/60):
         if bunny.colliderect(coin):
             coins.remove(coin)
             score += coin.value
+            sounds.coin_collect.play()
 
     for jetpack in jetpacks[:]:
         if bunny.colliderect(jetpack):
             jetpacks.remove(jetpack)
             jetpack_active = True
             jetpack_timer = JETPACK_DURATION
+            sounds.jetpack_collect.play()
 
     if not jetpack_active:
         for trap in traps:
             if bunny.colliderect(trap):
                 game_over = True
+                sounds.hit_trap.play()
+                music.stop()
                 return
 
     if bunny.bottom < 0:
